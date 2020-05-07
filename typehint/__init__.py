@@ -22,6 +22,10 @@ class TypeHints:
                 raise Exception('Multiple types for ' + node.id)
             return node.id
 
+    def _ann_type(self, ann):
+        if type(ann) == _ast.Name:
+            return ann.id
+
     def _scan_node(self, vartypes, node):
         if type(node) == _ast.Assign:
             value_type = self.hint_node(vartypes, node.value)
@@ -30,6 +34,8 @@ class TypeHints:
                     self._assign_node(vartypes, target, value_type)
                 else:
                     value_type = self.hint_node(vartypes, target)
+        elif type(node) == _ast.AnnAssign:
+            self._assign_node(vartypes, node.target, self._ann_type(node.annotation))
 
     def hint_node(self, vartypes, node):
         if type(node) == _ast.Name:
@@ -54,6 +60,9 @@ class TypeHints:
         func = module.body[0]
         if type(func) != _ast.FunctionDef:
             raise Exception('Root node is not a function')
+
+        if not args:
+            args = tuple(self._ann_type(arg.annotation) for arg in func.args.args)
 
         argnames = f.__code__.co_varnames[:f.__code__.co_argcount]
         vartypes = dict(zip(argnames, args))
