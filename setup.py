@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'typehint',
   packages = ['typehint'],
-  version = '0.1',
+  version = '0.2',
   license='MIT',
   description = 'Static Type Inference',
   author = 'Yuri Rapoport',
   author_email = 'yuri.rapoport@gmail.com',
   url = 'https://github.com/yrapop01/typehint',
-  download_url = 'https://github.com/yrapop01/typehint/archive/v_01.tar.gz',
+  download_url = 'https://github.com/yrapop01/typehint/archive/v_02.tar.gz',
   keywords = ['STATIC', 'TYPES', 'TYPING', 'INFERENCE'],
   install_requires=[
       ],
