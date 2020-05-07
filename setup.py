@@ -10,8 +10,6 @@ setup(
   url = 'https://github.com/yrapop01/typehint',
   download_url = 'https://github.com/yrapop01/typehint/archive/v_02.tar.gz',
   keywords = ['STATIC', 'TYPES', 'TYPING', 'INFERENCE'],
-  install_requires=[
-      ],
   classifiers=[
     'Development Status :: 3 - Alpha',      # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
     'Intended Audience :: Developers', 
