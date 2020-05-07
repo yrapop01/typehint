@@ -1,2 +1,1 @@
-# typeshint
 # typehint
