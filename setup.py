@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'typehint',
   packages = ['typehint'],
-  version = '0.2',
+  version = '0.3',
   license='MIT',
   description = 'Static Type Inference',
   author = 'Yuri Rapoport',
