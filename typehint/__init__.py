@@ -4,15 +4,47 @@ import inspect
 
 class Declaration:
     def __init__(self, return_type, arg_types):
-        self._return_types = return_type
+        self._return_type = return_type
         self._arg_types = arg_types
+    
+    def __repr__(self):
+        return f'<{self._return_type}>' + \
+               ''.join(f'[{arg}]' for arg in self._arg_types)
 
 class TypeHints:
     def __init__(self):
-        self._functions = {}
+        self._functions = {
+            'int': Declaration('int', ()),
+        }
 
     def declare_function(self, name, return_type, arg_types):
         self._functions[name] = Declaration(return_type, arg_types)
+
+    def _usage_call(self, call, equals_to=None):
+        assert type(call) == _ast.Call
+        
+        name = call.func.id
+        if name in self._functions:
+            return
+
+        if equals_to is None:
+            returns = 'void'
+        else:
+            returns = self.hint_node({}, equals_to)
+
+        args = [self.hint_node(arg) for arg in call.args]
+        self.declare_function(name, returns, args)
+
+    def usage(self, f):        
+        code = inspect.getsource(f.__code__)
+        body = ast.parse(code).body[0].body
+        
+        for node in body:
+            if type(node) == _ast.Expr:
+                if type(node.value) == _ast.Compare:
+                    self._usage_call(node.value.left, node.value.comparators[0])
+                elif type(value) == _ast.Call:
+                    self.usage_call(node.value.left)
 
     def _assign_node(self, vartypes, node, typename):
         if type(node) == _ast.Name:
@@ -44,6 +76,8 @@ class TypeHints:
             return type(node.n).__name__
         elif type(node) == _ast.Str:
             return 'str'
+        elif type(node) == _ast.Call:
+            return self._functions[node.func.id]._return_type
 
     def hint(self, f, args=()):
         source = inspect.getsource(f.__code__)
