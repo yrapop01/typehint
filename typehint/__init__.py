@@ -11,6 +11,25 @@ class Declaration:
         return f'<{self._return_type}>' + \
                ''.join(f'[{arg}]' for arg in self._arg_types)
 
+class Function:
+    def __init__(self, f):
+        self.name = f.__name__
+
+        module = ast.parse(inspect.getsource(f.__code__))
+        if not hasattr(module, 'body') or not module.body:
+            raise Exception("Not body in parse function tree")
+
+        if len(module.body) > 1:
+            raise Exception("Too many child nodes in the root tree")
+
+        func = module.body[0]
+        if type(func) != _ast.FunctionDef:
+            raise Exception('Root node is not a function')
+
+        self.module = func
+        self.argcount = f.__code__.co_argcount
+        self.varnames = f.__code__.co_varnames
+
 class TypeHints:
     def __init__(self):
         self._functions = {
@@ -32,8 +51,14 @@ class TypeHints:
         else:
             returns = self.hint_node({}, equals_to)
 
-        args = [self.hint_node(arg) for arg in call.args]
+        args = [self.hint_node({}, arg) for arg in call.args]
         self.declare_function(name, returns, args)
+
+    def _usage_expr(self, value):
+        if type(value) == _ast.Compare:
+            self._usage_call(value.left, value.comparators[0])
+        elif type(value) == _ast.Call:
+            self.usage_call(value.left)
 
     def usage(self, f):        
         code = inspect.getsource(f.__code__)
@@ -41,10 +66,11 @@ class TypeHints:
         
         for node in body:
             if type(node) == _ast.Expr:
-                if type(node.value) == _ast.Compare:
-                    self._usage_call(node.value.left, node.value.comparators[0])
-                elif type(value) == _ast.Call:
-                    self.usage_call(node.value.left)
+                self._usage_expr(node.value)
+            if type(node) == _ast.Assert:
+                self._usage_expr(node.test)
+
+        return f
 
     def _assign_node(self, vartypes, node, typename):
         if type(node) == _ast.Name:
@@ -79,29 +105,32 @@ class TypeHints:
         elif type(node) == _ast.Call:
             return self._functions[node.func.id]._return_type
 
-    def hint(self, f, args=()):
-        source = inspect.getsource(f.__code__)
-        if args and len(args) != f.__code__.co_argcount:
+    def function_hints(self, f, args=()):
+        if args and len(args) != f.argcount:
             raise Exception('Incorrect number of arguments')
 
-        module = ast.parse(source)
-        if not hasattr(module, 'body') or not module.body:
-            raise Exception("Not body in parse function tree")
-
-        if len(module.body) > 1:
-            raise Exception("Too many child nodes in the root tree")
-
-        func = module.body[0]
-        if type(func) != _ast.FunctionDef:
-            raise Exception('Root node is not a function')
-
         if not args:
-            args = tuple(self._ann_type(arg.annotation) for arg in func.args.args)
+            if f.name in self._functions:
+                args = self._functions[f.name]._arg_types
+            else:
+                args = tuple(self._ann_type(arg.annotation) for arg in f.module.args.args)
 
-        argnames = f.__code__.co_varnames[:f.__code__.co_argcount]
+        argnames = f.varnames[:f.argcount]
         vartypes = dict(zip(argnames, args))
 
-        for node in func.body:
+        for node in f.module.body:
             self._scan_node(vartypes, node)
         
         return vartypes
+
+    def function_returns(self, f):
+        if f.name in self._functions:
+            return self._functions[f.name]._return_type
+
+        return self._ann_type(f.module.returns)
+
+    def hint(self, func, args=()):
+        return self.function_hints(Function(func), args)
+
+    def returns(self, func):
+        return self.function_returns(Function(func))
